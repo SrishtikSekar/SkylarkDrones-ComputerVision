@@ -31,7 +31,8 @@ class WingLoss(nn.Module):
         super().__init__()
         self.w = w
         self.epsilon = epsilon
-        self.C = w - w * (1.0 + w / epsilon).log()
+        import math
+        self.C = w - w * math.log(1.0 + w / epsilon)
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         diff = (pred - target).abs()
