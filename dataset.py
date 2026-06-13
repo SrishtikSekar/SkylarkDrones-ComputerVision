@@ -48,7 +48,7 @@ def get_train_transforms():
         A.RandomRotate90(p=0.5),
         A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.05, p=0.6),
         A.GaussianBlur(blur_limit=(3, 5), p=0.2),
-        A.GaussNoise(var_limit=(10, 50), p=0.2),
+        A.GaussNoise(std_range=(0.01, 0.05), p=0.2),
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2(),
     ], keypoint_params=A.KeypointParams(format="xy", remove_invisible=False))
