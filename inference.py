@@ -157,18 +157,28 @@ def load_test_images_from_json(jpg_paths_file: str, test_root: str) -> List[str]
     The json contains absolute paths like:
       /test_dataset-20260613T061259Z-3-001/test_dataset/<subpath>.JPG
 
-    We strip everything up to and including the first "test_dataset/"
-    segment, so the result matches the structure under --test_root
-    (i.e. test_root/<subpath>.JPG).
+    We strip everything up to and including the LAST "test_dataset/"
+    segment, so e.g.
+
+      /test_dataset-20260613T061259Z-3-001/test_dataset/Blupine_Baloda/Survey 1/GCP8/DJI_..._0443_V.JPG
+
+    becomes
+
+      Blupine_Baloda/Survey 1/GCP8/DJI_..._0443_V.JPG
+
+    which, combined with --test_root (e.g. /content/drive/MyDrive/test_dataset),
+    gives the real path:
+
+      /content/drive/MyDrive/test_dataset/Blupine_Baloda/Survey 1/GCP8/DJI_..._0443_V.JPG
     """
     with open(jpg_paths_file, "r") as f:
         raw_paths = json.load(f)
 
     rel_paths = []
+    marker = "test_dataset/"
     for p in raw_paths:
         p = p.replace("\\", "/")
-        marker = "test_dataset/"
-        idx = p.find(marker)
+        idx = p.rfind(marker)
         if idx == -1:
             rel = p.lstrip("/")
         else:
