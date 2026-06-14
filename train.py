@@ -50,7 +50,7 @@ def train_one_epoch(model, loader, criterion, optimizer, scheduler, device, scal
         imgs, gt_coords, gt_labels, _ = to_device(batch, device)
 
         optimizer.zero_grad()
-        with torch.cuda.amp.autocast(enabled=scaler is not None):
+        with torch.amp.autocast('cuda', enabled=scaler is not None):
             pred_coords, pred_logits = model(imgs)
             loss, l_reg, l_cls = criterion(pred_coords, pred_logits,
                                            gt_coords, gt_labels)
@@ -92,7 +92,7 @@ def validate(model, loader, criterion, device):
     for batch in loader:
         imgs, gt_coords, gt_labels, meta = to_device(batch, device)
 
-        with torch.cuda.amp.autocast():
+        with torch.amp.autocast('cuda'):
             pred_coords, pred_logits = model(imgs)
             loss, _, _ = criterion(pred_coords, pred_logits, gt_coords, gt_labels)
 
@@ -202,7 +202,7 @@ def main():
         anneal_strategy="cos",
     )
 
-    scaler = torch.cuda.amp.GradScaler() if (args.fp16 and device.type == "cuda") else None
+    scaler = torch.amp.GradScaler('cuda') if (args.fp16 and device.type == "cuda") else None
 
     # ── Training loop ─────────────────────────────────────────────────────────
     best_pck25 = -1.0
