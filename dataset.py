@@ -16,7 +16,10 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 import cv2
-cv2.setLogLevel(0)
+try:
+    cv2.utils.logging.setLogLevel(cv2.utils.logging.LOG_LEVEL_SILENT)
+except AttributeError:
+    pass
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
