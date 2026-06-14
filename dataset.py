@@ -54,11 +54,12 @@ def get_train_transforms():
     ], keypoint_params=A.KeypointParams(format="xy", remove_invisible=False))
 
 def get_val_transforms():
+    # No keypoint_params here: val crops are always centred exactly on the GCP
+    # (no jitter, no geometric augmentation), so the keypoint never moves.
     return A.Compose([
-        A.NoOp(),   # satisfies keypoint processor requirement
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2(),
-    ], keypoint_params=A.KeypointParams(format="xy", remove_invisible=False))
+    ])
 
 
 # ── Core dataset ──────────────────────────────────────────────────────────────
@@ -147,16 +148,27 @@ class GCPDataset(Dataset):
         rel_path, cx, cy, label = self.samples[idx]
         img_path = self.data_root / rel_path
 
-        crop, kp_x, kp_y = self._load_crop(img_path, cx, cy)
+        # Some files referenced in the JSON may be missing on disk
+        # (broken downloads etc.). Skip gracefully by resampling.
+        try:
+            crop, kp_x, kp_y = self._load_crop(img_path, cx, cy)
+        except FileNotFoundError:
+            return self.__getitem__(random.randint(0, len(self) - 1))
 
         if self.transform:
-            transformed = self.transform(
-                image=crop,
-                keypoints=[(kp_x, kp_y)]
-            )
-            crop   = transformed["image"]          # [3, H, W] tensor
-            kps    = transformed["keypoints"]
-            kp_x, kp_y = kps[0] if kps else (kp_x, kp_y)
+            if self.is_train:
+                transformed = self.transform(
+                    image=crop,
+                    keypoints=[(kp_x, kp_y)]
+                )
+                crop = transformed["image"]          # [3, H, W] tensor
+                kps  = transformed["keypoints"]
+                kp_x, kp_y = kps[0] if kps else (kp_x, kp_y)
+            else:
+                # Val transform has no keypoint_params; keypoint is unchanged
+                # because val crops are centred exactly on the GCP with no
+                # geometric augmentation.
+                crop = self.transform(image=crop)["image"]
 
         # Normalise keypoint to [-1, 1] within crop
         norm_x = (kp_x / self.crop_size) * 2.0 - 1.0
