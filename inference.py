@@ -149,6 +149,45 @@ def collect_test_images(test_root: str) -> List[str]:
     return sorted(rel_paths)
 
 
+def load_test_images_from_json(jpg_paths_file: str, test_root: str) -> List[str]:
+    """
+    Load image paths from a jpg_paths.json file and convert them to paths
+    relative to test_root.
+
+    The json contains absolute paths like:
+      /test_dataset-20260613T061259Z-3-001/test_dataset/<subpath>.JPG
+
+    We strip everything up to and including the first "test_dataset/"
+    segment, so the result matches the structure under --test_root
+    (i.e. test_root/<subpath>.JPG).
+    """
+    with open(jpg_paths_file, "r") as f:
+        raw_paths = json.load(f)
+
+    rel_paths = []
+    for p in raw_paths:
+        p = p.replace("\\", "/")
+        marker = "test_dataset/"
+        idx = p.find(marker)
+        if idx == -1:
+            rel = p.lstrip("/")
+        else:
+            rel = p[idx + len(marker):]
+        rel_paths.append(rel)
+
+    # sanity check: warn about files that don't exist on disk
+    root = Path(test_root)
+    missing = [rel for rel in rel_paths if not (root / rel).exists()]
+    if missing:
+        print(f"WARNING: {len(missing)}/{len(rel_paths)} listed images not found under {test_root}")
+        for m in missing[:10]:
+            print(f"  missing: {m}")
+        if len(missing) > 10:
+            print(f"  ... and {len(missing) - 10} more")
+
+    return rel_paths
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser()
@@ -161,6 +200,10 @@ def main():
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--no_tta",    action="store_true",
                         help="Disable test-time augmentation (faster but less accurate)")
+    parser.add_argument("--jpg_paths", default=None,
+                        help="Path to jpg_paths.json listing exactly which images to run "
+                             "inference on (relative to test_dataset/). If not provided, "
+                             "all JPG/JPEG images under --test_root are used.")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -178,8 +221,12 @@ def main():
     transform = get_test_transform()
 
     # ── Collect images ────────────────────────────────────────────────────────
-    test_images = collect_test_images(args.test_root)
-    print(f"Found {len(test_images)} test images")
+    if args.jpg_paths:
+        test_images = load_test_images_from_json(args.jpg_paths, args.test_root)
+        print(f"Loaded {len(test_images)} test images from {args.jpg_paths}")
+    else:
+        test_images = collect_test_images(args.test_root)
+        print(f"Found {len(test_images)} test images")
 
     # ── Predict ───────────────────────────────────────────────────────────────
     predictions = {}
