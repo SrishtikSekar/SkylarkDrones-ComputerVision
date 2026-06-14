@@ -54,8 +54,10 @@ def get_train_transforms():
     ], keypoint_params=A.KeypointParams(format="xy", remove_invisible=False))
 
 def get_val_transforms():
-    # No keypoint_params here: val crops are always centred exactly on the GCP
-    # (no jitter, no geometric augmentation), so the keypoint never moves.
+    # No keypoint_params here — val crops are always centred exactly on the
+    # GCP and the val transform applies no geometric ops, so the keypoint
+    # never moves. Avoids the "Got processor for keypoints, but no transform
+    # to process it" warning.
     return A.Compose([
         A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ToTensorV2(),
@@ -149,7 +151,8 @@ class GCPDataset(Dataset):
         img_path = self.data_root / rel_path
 
         # Some files referenced in the JSON may be missing on disk
-        # (broken downloads etc.). Skip gracefully by resampling.
+        # (download gaps etc). Skip gracefully by resampling a random index
+        # instead of crashing the whole DataLoader worker.
         try:
             crop, kp_x, kp_y = self._load_crop(img_path, cx, cy)
         except FileNotFoundError:
@@ -165,9 +168,7 @@ class GCPDataset(Dataset):
                 kps  = transformed["keypoints"]
                 kp_x, kp_y = kps[0] if kps else (kp_x, kp_y)
             else:
-                # Val transform has no keypoint_params; keypoint is unchanged
-                # because val crops are centred exactly on the GCP with no
-                # geometric augmentation.
+                # Val transform has no geometric ops -> keypoint unchanged
                 crop = self.transform(image=crop)["image"]
 
         # Normalise keypoint to [-1, 1] within crop
