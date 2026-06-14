@@ -169,3 +169,11 @@ gcp_pipeline/
 ├── GCP_Pipeline.ipynb  # Colab notebook tying everything together
 └── README.md
 ```
+## Best Model Path
+
+You can download the best model from:
+https://drive.google.com/file/d/1mJOTiRR3bXqc9p_P1pfmmwK-WNRSD_7G/view?usp=sharing
+
+
+and also the final model from :
+https://drive.google.com/file/d/1SBm70Op88fJ4utlIYXEtKxz_tmqOJw9i/view?usp=sharing
