@@ -169,9 +169,7 @@ def main():
     # ── Load model ────────────────────────────────────────────────────────────
     model = GCPNet(backbone_name=args.backbone, num_classes=len(SHAPE_CLASSES),
                    pretrained=False)
-    import numpy as np
-    torch.serialization.add_safe_globals([np.core.multiarray.scalar])
-    ckpt = torch.load(args.weights, map_location=device)
+    ckpt = torch.load(args.weights, map_location=device, weights_only=False)
     state = ckpt.get("model_state", ckpt)   # handle both raw and wrapped saves
     model.load_state_dict(state)
     model.to(device).eval()
